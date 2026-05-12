@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgoraMT — Gerador de Posts</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --red: #D91B1B;
+    --red-dark: #A01010;
+    --black: #111111;
+    --dark: #1a1a1a;
+    --gray: #2a2a2a;
+    --light: #f5f5f5;
+    --white: #ffffff;
+    --canvas-w: 450px;
+    --canvas-h: 800px;
+  }
+
+  body {
+    font-family: 'Barlow', sans-serif;
+    background: #0e0e0e;
+    color: #e0e0e0;
+    min-height: 100vh;
+  }
+
+  header {
+    background: #111;
+    border-bottom: 3px solid var(--red);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo-header {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: 28px;
+    letter-spacing: -0.5px;
+    color: var(--white);
+  }
+
+  .logo-header span { color: var(--red); }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--red);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 900; color: white;
+    font-family: 'Barlow Condensed', sans-serif;
+  }
+
+  .subtitle-header {
+    margin-left: auto;
+    font-size: 12px;
+    color: #666;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .main {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 67px);
+  }
+
+  .sidebar {
+    background: #161616;
+    border-right: 1px solid #2a2a2a;
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .sidebar h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 4px;
+  }
+
+  .field-group { display: flex; flex-direction: column; gap: 8px; }
+
+  .field-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  input[type="text"], textarea {
+    background: #1f1f1f;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #e8e8e8;
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+
+  input[type="text"]:focus, textarea:focus { border-color: var(--red); }
+
+  textarea { resize: vertical; min-height: 120px; line-height: 1.5; }
+
+  .upload-zone {
+    border: 2px dashed #333;
+    border-radius: 8px;
+    padding: 32px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .upload-zone:hover { border-color: var(--red); background: rgba(217,27,27,0.05); }
+  .upload-zone.has-image { border-style: solid; border-color: var(--red); }
+
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+  .upload-icon { font-size: 32px; margin-bottom: 8px; }
+  .upload-text { font-size: 13px; color: #666; }
+  .upload-sub { font-size: 11px; color: #444; margin-top: 4px; }
+
+  .upload-preview {
+    width: 100%; height: 120px;
+    object-fit: cover;
+    border-radius: 4px;
+    display: none;
+  }
+
+  .upload-zone.has-image .upload-preview { display: block; }
+  .upload-zone.has-image .upload-icon,
+  .upload-zone.has-image .upload-text,
+  .upload-zone.has-image .upload-sub { display: none; }
+
+  .btn-generate {
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 14px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    width: 100%;
+  }
+
+  .btn-generate:hover { background: var(--red-dark); }
+  .btn-generate:active { transform: scale(0.98); }
+
+  .output-area {
+    padding: 32px;
+    overflow-y: auto;
+  }
+
+  .output-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 24px;
+  }
+
+  .layouts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+    gap: 40px;
+  }
+
+  .layout-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .layout-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .layout-num {
+    background: var(--red);
+    color: white;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+  }
+
+  /* ========================
+     CANVAS WRAPPER
+  ======================== */
+  .canvas-wrapper {
+    width: var(--canvas-w);
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  .canvas-wrapper canvas { display: block; }
+
+  .btn-download {
+    background: #1f1f1f;
+    border: 1px solid #333;
+    border-radius: 6px;
+    color: #aaa;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+  }
+
+  .btn-download:hover { border-color: var(--red); color: var(--red); background: rgba(217,27,27,0.05); }
+
+  .placeholder-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    color: #333;
+    text-align: center;
+    gap: 16px;
+  }
+
+  .placeholder-state svg { opacity: 0.3; }
+  .placeholder-state p { font-size: 14px; color: #444; }
+
+  .divider {
+    height: 1px;
+    background: #222;
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">@</div>
+  <div class="logo-header"><span>AGORA</span>MT</div>
+  <div class="subtitle-header">Gerador de Posts</div>
+</header>
+
+<div class="main">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div>
+      <h2>Conteúdo da Notícia</h2>
+    </div>
+
+    <div class="field-group">
+      <label>Título da Notícia</label>
+      <input type="text" id="titulo" placeholder="Ex: Prefeito anuncia novo projeto..." maxlength="80" />
+    </div>
+
+    <div class="field-group">
+      <label>Texto da Notícia</label>
+      <textarea id="noticia" placeholder="Digite o texto principal da notícia aqui. Recomendamos entre 100 e 180 caracteres para melhor visualização..." maxlength="220"></textarea>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field-group">
+      <label>Imagem</label>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/*" />
+        <div class="upload-icon">🖼️</div>
+        <div class="upload-text">Clique ou arraste a imagem</div>
+        <div class="upload-sub">JPG, PNG, WEBP</div>
+        <img class="upload-preview" id="preview" src="" alt="Preview" />
+      </div>
+    </div>
+
+    <button class="btn-generate" onclick="generateAll()">▶ Gerar Layouts</button>
+  </aside>
+
+  <!-- OUTPUT -->
+  <main class="output-area">
+    <div class="output-title">Layouts prontos para postagem</div>
+
+    <div id="placeholderState" class="placeholder-state">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+        <rect x="8" y="8" width="48" height="48" rx="4" stroke="#444" stroke-width="2"/>
+        <rect x="16" y="24" width="32" height="4" rx="2" fill="#444"/>
+        <rect x="16" y="32" width="24" height="3" rx="2" fill="#333"/>
+        <rect x="16" y="38" width="28" height="3" rx="2" fill="#333"/>
+        <rect x="16" y="14" width="14" height="6" rx="1" fill="#D91B1B" opacity="0.6"/>
+      </svg>
+      <p>Preencha os campos e clique em<br><strong style="color:#666">Gerar Layouts</strong></p>
+    </div>
+
+    <div class="layouts-grid" id="layoutsGrid" style="display:none;"></div>
+  </main>
+</div>
+
+<script>
+let uploadedImage = null;
+
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+const preview = document.getElementById('preview');
+
+fileInput.addEventListener('change', (e) => loadImage(e.target.files[0]));
+
+uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.style.borderColor = '#D91B1B'; });
+uploadZone.addEventListener('dragleave', () => { uploadZone.style.borderColor = ''; });
+uploadZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadZone.style.borderColor = '';
+  if (e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]);
+});
+
+function loadImage(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      uploadedImage = img;
+      preview.src = ev.target.result;
+      uploadZone.classList.add('has-image');
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// =============================================
+// RENDER ENGINE
+// =============================================
+
+const W = 900;
+const H = 1600;
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '';
+  let lines = [];
+  for (let i = 0; i < words.length; i++) {
+    const testLine = line + words[i] + ' ';
+    if (ctx.measureText(testLine).width > maxWidth && i > 0) {
+      lines.push(line.trim());
+      line = words[i] + ' ';
+    } else {
+      line = testLine;
+    }
+  }
+  lines.push(line.trim());
+  lines.forEach((l, i) => ctx.fillText(l, x, y + i * lineHeight));
+  return lines.length;
+}
+
+function drawPatternBg(ctx, color1, color2, textPattern) {
+  ctx.fillStyle = color1;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.font = 'bold 26px "Barlow Condensed", sans-serif';
+  ctx.fillStyle = color2;
+  ctx.globalAlpha = 0.08;
+  let yy = 0;
+  let row = 0;
+  while (yy < H) {
+    let xx = row % 2 === 0 ? 0 : -80;
+    while (xx < W + 100) {
+      ctx.fillText(textPattern, xx, yy + 22);
+      xx += ctx.measureText(textPattern).width + 8;
+    }
+    yy += 30;
+    row++;
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawLogoBar(ctx, y, h, bg) {
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, y, W, h);
+
+  const atIcon = () => {
+    const cx = 310, cy = y + h / 2, r = 22;
+    ctx.fillStyle = '#D91B1B';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 20px "Barlow Condensed", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('@', cx, cy + 1);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  };
+
+  atIcon();
+
+  ctx.font = 'bold 52px "Barlow Condensed", sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'left';
+  ctx.fillText('AGORA', 340, y + h / 2 + 18);
+  ctx.fillStyle = '#aaa';
+  ctx.fillText('MT', 340 + ctx.measureText('AGORA').width + 2, y + h / 2 + 18);
+}
+
+function drawUrlBar(ctx, y, h) {
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath();
+  ctx.roundRect(100, y + 12, W - 200, h - 24, 14);
+  ctx.fill();
+  ctx.font = '30px "Barlow", sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.textAlign = 'center';
+  ctx.fillText('www.agoramt.com.br', W / 2, y + h / 2 + 10);
+  ctx.textAlign = 'left';
+}
+
+// =============================================
+// LAYOUT 1 — Clássico (igual ao exemplo)
+// =============================================
+function drawLayout1(canvas, titulo, noticia, img) {
+  const ctx = canvas.getContext('2d');
+  canvas.width = W;
+  canvas.height = H;
+
+  const HEADER_H = 220;
+  const TITLE_BAR_H = 80;
+  const IMG_H = 760;
+  const NEWS_H = 380;
+  const LOGO_H = 180;
+  const URL_H = 120;
+
+  // BG padrão topo
+  drawPatternBg(ctx, '#111', '#fff', 'AGORAMT ');
+
+  // Header faixa vermelha com TITULO
+  ctx.fillStyle = '#D91B1B';
+  ctx.fillRect(80, HEADER_H - TITLE_BAR_H + 10, 360, TITLE_BAR_H - 16);
+  ctx.font = 'bold 30px "Barlow Condensed", sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'left';
+  ctx.fillText('TITULO DA NOTICIA', 98, HEADER_H - 18);
+
+  // Linha vermelha fina
+  ctx.fillStyle = '#D91B1B';
+  ctx.fillRect(0, HEADER_H, W, 6);
+
+  // Imagem
+  const imgY = HEADER_H + 6;
+  if (img) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, imgY, W, IMG_H);
+    ctx.clip();
+    const scale = Math.max(W / img.width, IMG_H / img.height);
+    const sw = img.width * scale;
+    const sh = img.height * scale;
+    ctx.drawImage(img, (W - sw) / 2, imgY + (IMG_H - sh) / 2, sw, sh);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(0, imgY, W, IMG_H);
+    ctx.font = '40px serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#444';
+    ctx.fillText('🖼', W / 2, imgY + IMG_H / 2 + 14);
+    ctx.textAlign = 'left';
+  }
+
+  // Faixa vermelho noticia
+  const newsY = imgY + IMG_H;
+  ctx.fillStyle = '#C0191A';
+  ctx.fillRect(0, newsY, W, NEWS_H);
+
+  // Linha esquerda branca
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(80, newsY + 40, 8, NEWS_H - 80);
+
+  // Texto da notícia
+  ctx.font = 'bold 52px "Barlow Condensed", sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'left';
+  const lines = wrapText(ctx, (noticia || 'NOTICIA, NOTICIA, NOTICIA,').toUpperCase(), 108, newsY + 100, W - 160, 64);
+
+  // Logo bar
+  const logoY = newsY + NEWS_H;
+  drawLogoBar(ctx, logoY, LOGO_H, '#111');
+
+  // URL
+  const urlY = logoY + LOGO_H;
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, urlY, W, URL_H);
+  drawUrlBar(ctx, urlY, URL_H);
+
+  // Titulo real
+  ctx.fillStyle = '#D91B1B';
+  ctx.fillRect(80, HEADER_H - TITLE_BAR_H + 10, 360, TITLE_BAR_H - 16);
+  ctx.font = 'bold 30px "Barlow Condensed", sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'left';
+  const titDisplay = (titulo || 'TITULO DA NOTICIA').toUpperCase();
+  ctx.fillText(titDisplay.length > 30 ? titDisplay.slice(0, 30) + '…' : titDisplay, 98, HEADER_H - 18);
+}
+
+// =============================================
+// LAYOUT 2 — Bold / Escuro (variação)
+// =============================================
+function drawLayout2(canvas, titulo, noticia, img) {
+  const ctx = canvas.getContext('2d');
+  canvas.width = W;
+  canvas.height = H;
+
+  const TOP_H = 80;
+  const IMG_H = 700;
+  const OVERLAY_H = 260;
+  const NEWS_H = 380;
+  const LOGO_H = 180;
+  const URL_H = 120;
+  const imgY = TOP_H;
+
+  // Topo preto com pattern
+  drawPatternBg(ctx, '#111', '#fff', 'AGORAMT ');
+
+  // Imagem
+  if (img) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, imgY, W, IMG_H);
+    ctx.clip();
+    const scale = Math.max(W / img.width, IMG_H / img.height);
+    const sw = img.width * scale;
+    const sh = img.height * scale;
+    ctx.drawImage(img, (W - sw) / 2, imgY + (IMG_H - sh) / 2, sw, sh);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = '#222';
+    ctx.fillRect(0, imgY, W, IMG_H);
+    ctx.font = '40px serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#444';
+    ctx.fillText('🖼', W / 2, imgY + IMG_H / 2 + 14);
+    ctx.textAlign = 'left';
+  }
+
+  // Gradiente escuro sobre a parte inferior da imagem
+  const grad = ctx.createLinearGradient(0, imgY + IMG_H - OVERLAY_H, 0, imgY + IMG_H);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, 'rgba(0,0,0,0.92)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, imgY + IMG_H - OVERLAY_H, W, OVERLAY_H);
+
+  // Título sobre imagem (parte inferior)
+  const titY = imgY + IMG_H - 60;
+  ctx.fillStyle = '#D91B1B';
+  ctx.fillRect(0, imgY + IMG_H - OVERLAY_H + 20, 10, OVERLAY_H - 80);
+  ctx.font = 'bold 44px "Barlow Condensed", sans-serif';
+  ctx.fillStyle = '#fff';
+  const tit = (titulo || 'TITULO DA NOTICIA').toUpperCase();
+  ctx.textAlign = 'left';
+  const titLines = wrapText(ctx, tit, 30, imgY + IMG_H - OVERLAY_H + 80, W - 60, 52);
+
+  // Faixa preta noticia
+  const newsY = imgY + IMG_H;
+  ctx.fillStyle = '#1a0000';
+  ctx.fillRect(0, newsY, W, NEWS_H);
+  ctx.fillStyle = '#D91B1B';
+  ctx.fillRect(0, newsY, W, 6);
+
+  ctx.font = 'bold 48px "Barlow Condensed", sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.textAlign = 'left';
+  wrapText(ctx, (noticia || 'Noticia, noticia, noticia, noticia, noticia').toUpperCase(), 50, newsY + 90, W - 100, 62);
+
+  // Logo
+  const logoY = newsY + NEWS_H;
+  drawLogoBar(ctx, logoY, LOGO_H, '#111');
+
+  // URL
+  const urlY = logoY + LOGO_H;
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, urlY, W, URL_H);
+  drawUrlBar(ctx, urlY, URL_H);
+}
+
+// =============================================
+// LAYOUT 3 — Clean / Moderno
+// =============================================
+function drawLayout3(canvas, titulo, noticia, img) {
+  const ctx = canvas.getContext('2d');
+  canvas.width = W;
+  canvas.height = H;
+
+  const TOP_H = 200;
+  const IMG_H = 680;
+  const NEWS_H = 420;
+  const LOGO_H = 180;
+  const URL_H = 120;
+
+  // Topo vermelho escuro com pattern
+  drawPatternBg(ctx, '#1a0000', '#D91B1B', 'AGORAMT ');
+
+  // Badge "NOTÍCIA" top
+  ctx.fillStyle = '#D91B1B';
+  ctx.beginPath();
+  ctx.roundRect(50, 60, 180, 46, 6);
+  ctx.fill();
+  ctx.font = 'bold 26px "Barlow Condensed", sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'left';
+  ctx.fillText('● NOTÍCIA', 68, 90);
+
+  // Título no topo
+  ctx.font = 'bold 52px "Barlow Condensed", sans-serif';
+  ctx.fillStyle = '#fff';
+  const tit = (titulo || 'TITULO DA NOTICIA').toUpperCase();
+  wrapText(ctx, tit, 50, 148, W - 100, 60);
+
+  // Linha separadora vermelha
+  ctx.fillStyle = '#D91B1B';
+  ctx.fillRect(0, TOP_H, W, 8);
+
+  // Imagem
+  const imgY = TOP_H + 8;
+  if (img) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, imgY, W, IMG_H);
+    ctx.clip();
+    const scale = Math.max(W / img.width, IMG_H / img.height);
+    const sw = img.width * scale;
+    const sh = img.height * scale;
+    ctx.drawImage(img, (W - sw) / 2, imgY + (IMG_H - sh) / 2, sw, sh);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = '#222';
+    ctx.fillRect(0, imgY, W, IMG_H);
+    ctx.font = '40px serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#444';
+    ctx.fillText('🖼', W / 2, imgY + IMG_H / 2 + 14);
+    ctx.textAlign = 'left';
+  }
+
+  // Linha separadora inferior imagem
+  ctx.fillStyle = '#D91B1B';
+  ctx.fillRect(0, imgY + IMG_H, W, 8);
+
+  // Faixa noticia (preto com detalhe)
+  const newsY = imgY + IMG_H + 8;
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, newsY, W, NEWS_H);
+
+  // Faixa lateral decorativa
+  ctx.fillStyle = '#D91B1B';
+  ctx.fillRect(50, newsY + 30, 6, NEWS_H - 60);
+
+  ctx.font = 'bold 50px "Barlow Condensed", sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'left';
+  wrapText(ctx, (noticia || 'Noticia, noticia, noticia, noticia, noticia, noticia').toUpperCase(), 80, newsY + 90, W - 130, 64);
+
+  // Logo
+  const logoY = newsY + NEWS_H;
+  drawLogoBar(ctx, logoY, LOGO_H, '#0d0d0d');
+
+  // URL
+  const urlY = logoY + LOGO_H;
+  ctx.fillStyle = '#0d0d0d';
+  ctx.fillRect(0, urlY, W, URL_H);
+  drawUrlBar(ctx, urlY, URL_H);
+}
+
+// =============================================
+// GENERATE ALL
+// =============================================
+function generateAll() {
+  const titulo = document.getElementById('titulo').value.trim();
+  const noticia = document.getElementById('noticia').value.trim();
+
+  if (!titulo && !noticia && !uploadedImage) {
+    alert('Preencha pelo menos o título ou texto da notícia!');
+    return;
+  }
+
+  document.getElementById('placeholderState').style.display = 'none';
+  const grid = document.getElementById('layoutsGrid');
+  grid.style.display = 'grid';
+  grid.innerHTML = '';
+
+  const layouts = [
+    { name: 'Layout 1 — Clássico', fn: drawLayout1, id: 'l1' },
+    { name: 'Layout 2 — Bold Escuro', fn: drawLayout2, id: 'l2' },
+    { name: 'Layout 3 — Moderno', fn: drawLayout3, id: 'l3' },
+  ];
+
+  layouts.forEach((layout, i) => {
+    const card = document.createElement('div');
+    card.className = 'layout-card';
+
+    const label = document.createElement('div');
+    label.className = 'layout-label';
+    label.innerHTML = `<div class="layout-num">${i + 1}</div>${layout.name}`;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'canvas-wrapper';
+
+    const canvas = document.createElement('canvas');
+    canvas.style.width = '450px';
+    canvas.style.height = '800px';
+    canvas.style.display = 'block';
+
+    wrapper.appendChild(canvas);
+
+    const btnRow = document.createElement('div');
+    btnRow.style.display = 'flex';
+    btnRow.style.gap = '10px';
+
+    const btnDl = document.createElement('button');
+    btnDl.className = 'btn-download';
+    btnDl.innerHTML = '⬇ Baixar PNG';
+    btnDl.onclick = () => {
+      const link = document.createElement('a');
+      link.download = `agoramt-${layout.id}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+
+    btnRow.appendChild(btnDl);
+    card.appendChild(label);
+    card.appendChild(wrapper);
+    card.appendChild(btnRow);
+    grid.appendChild(card);
+
+    layout.fn(canvas, titulo, noticia, uploadedImage);
+  });
+}
+
+// Enter para gerar
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) generateAll();
+});
+</script>
+
+</body>
+</html>
