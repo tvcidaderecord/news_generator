@@ -13,12 +13,11 @@
   --border:#252525;--border2:#2e2e2e;
   --text:#e0e0e0;--text2:#888;--text3:#555;--text4:#333;
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Barlow',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 header{background:#111;border-bottom:3px solid var(--red);padding:14px 28px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100}
 .logo-wrap{display:flex;align-items:center;gap:12px}
 .logo-ic{width:34px;height:34px;background:var(--red);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;color:#fff;font-family:'Barlow Condensed',sans-serif;flex-shrink:0}
-.logo-txt{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:22px;color:#fff;letter-spacing:-.3px}
+.logo-txt{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:22px;color:#fff}
 .logo-txt span{color:var(--red)}
 .logo-sub{font-size:11px;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-top:1px}
 .header-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
@@ -68,13 +67,12 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 .manager-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
 .manager-header h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--text)}
 .layouts-list{display:flex;flex-direction:column;gap:12px}
-.layout-item{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;display:flex;align-items:center;gap:16px;transition:border-color .2s}
-.layout-item:hover{border-color:var(--border2)}
-.layout-thumb{width:50px;height:88px;border-radius:4px;object-fit:cover;background:var(--bg4);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text4);overflow:hidden}
+.layout-item{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px;display:flex;align-items:center;gap:16px}
+.layout-thumb{width:50px;height:88px;border-radius:4px;background:var(--bg4);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text4);overflow:hidden}
 .layout-thumb img{width:100%;height:100%;object-fit:cover}
 .layout-info{flex:1;min-width:0}
 .layout-name{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px}
-.layout-meta{font-size:11px;color:var(--text3);line-height:1.6}
+.layout-meta{font-size:11px;color:var(--text3);line-height:1.8}
 .layout-meta span{display:inline-block;margin-right:12px}
 .layout-status{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px}
 .layout-status.ok{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.2)}
@@ -97,9 +95,8 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 .loading-overlay p{font-family:'Barlow Condensed',sans-serif;font-size:18px;color:#aaa;letter-spacing:1px}
 .loading-overlay .spinner{width:36px;height:36px;border-width:3px}
 .loading-overlay.hidden{display:none}
-.conn-banner{background:var(--bg2);border:1px solid var(--border);border-left:3px solid #f59e0b;border-radius:7px;padding:14px 18px;font-size:13px;color:#d4a040;margin-bottom:20px;display:none}
-.conn-banner.show{display:block}
-.conn-banner a{color:#f59e0b;text-decoration:underline;cursor:pointer}
+.error-box{background:#1a0000;border:1px solid #5a0000;border-radius:8px;padding:16px;font-size:13px;color:#f87171;line-height:1.6;margin-bottom:16px;display:none}
+.error-box.show{display:block}
 @media(max-width:800px){.app{grid-template-columns:1fr}.sidebar{border-right:none;border-bottom:1px solid var(--border)}.posts-grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -109,7 +106,6 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
   <div class="spinner"></div>
   <p id="loadingMsg">Carregando layouts...</p>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <header>
@@ -167,9 +163,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 
     <!-- Tab: Gerar -->
     <div class="tab-content active" id="tab-content-gerar">
-      <div class="conn-banner" id="connBanner">
-        ⚠️ URL do servidor não configurada. <a onclick="promptConfig()">Clique aqui para configurar</a>.
-      </div>
+      <div class="error-box" id="errorBox"></div>
       <div class="placeholder" id="placeholder">
         <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
           <rect x="4" y="4" width="44" height="44" rx="5" stroke="#2a2a2a" stroke-width="2"/>
@@ -192,7 +186,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
           <input type="file" id="newLayoutFile" accept="image/*" style="display:none" onchange="promptNewLayout(this)" />
         </div>
         <p style="font-size:12px;color:var(--text3);margin-top:-10px;">
-          Cada layout é a imagem base de um dos posts. Substituir um layout atualiza para toda a equipe automaticamente.
+          Cada layout é a imagem base de um dos posts. Substituir atualiza para toda a equipe.
         </p>
         <div class="layouts-list" id="layoutsList">
           <div style="text-align:center;padding:40px;color:var(--text4);font-size:13px;">Carregando...</div>
@@ -204,48 +198,25 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
 </div>
 
 <script>
-// ─── CONFIGURAÇÃO ─────────────────────────────────────────────
-// A URL é salva no localStorage para que cada usuário configure uma vez
-let SCRIPT_URL = localStorage.getItem('ng_script_url') || '';
+// ─── URL GRAVADA (não precisa configurar) ─────────────────────
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbywLVWV2O7AgnS2rtb1uKqJgk3XnzRtS2OausYfbW7Zx0LUTSWqwkvBEDKleq5uqj2n/exec';
 
 // Posições fixas dos textos no canvas (1080x1920)
 const TC = {
-  titulo:  { x: 60, y: 1164, maxW: 960, lineH: 72,  size: 60 },
-  noticia: { x: 60, y: 1290, maxW: 960, lineH: 68,  size: 52 },
+  titulo:  { x: 60, y: 1164, maxW: 960, lineH: 72, size: 60 },
+  noticia: { x: 60, y: 1290, maxW: 960, lineH: 68, size: 52 },
   foto:    { x: 0,  y: 428,  w: 1080,  h: 632 }
 };
 const CW = 1080, CH = 1920;
 
-// ─── STATE ────────────────────────────────────────────────────
 let layouts   = [];
 let userPhoto = null;
 
 // ─── INIT ─────────────────────────────────────────────────────
 window.addEventListener('load', () => {
   setupPhotoUpload();
-  if (!SCRIPT_URL) {
-    document.getElementById('connBanner').classList.add('show');
-    hideLoading();
-  } else {
-    loadLayouts();
-  }
+  loadLayouts();
 });
-
-// ─── CONFIG ───────────────────────────────────────────────────
-function promptConfig() {
-  const url = prompt(
-    'Cole aqui a URL da Web App do Apps Script:\n(Implantar → Gerenciar implantações → copiar URL)',
-    SCRIPT_URL
-  );
-  if (url && url.startsWith('https://')) {
-    SCRIPT_URL = url.trim();
-    localStorage.setItem('ng_script_url', SCRIPT_URL);
-    document.getElementById('connBanner').classList.remove('show');
-    loadLayouts();
-  } else if (url !== null) {
-    toast('URL inválida. Deve começar com https://', 'error');
-  }
-}
 
 // ─── TABS ─────────────────────────────────────────────────────
 function switchTab(tab) {
@@ -255,7 +226,7 @@ function switchTab(tab) {
   document.getElementById('tab-' + tab).classList.add('active');
 }
 
-// ─── LOADING / TOAST ──────────────────────────────────────────
+// ─── UI HELPERS ───────────────────────────────────────────────
 function showLoading(msg) {
   document.getElementById('loadingMsg').textContent = msg || 'Aguarde...';
   document.getElementById('loadingOverlay').classList.remove('hidden');
@@ -268,7 +239,15 @@ function toast(msg, type) {
   el.textContent = msg;
   el.className = 'toast show ' + (type || '');
   clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('show'), 3500);
+  el._t = setTimeout(() => el.classList.remove('show'), 4000);
+}
+function showError(msg) {
+  const el = document.getElementById('errorBox');
+  el.innerHTML = msg;
+  el.classList.add('show');
+}
+function hideError() {
+  document.getElementById('errorBox').classList.remove('show');
 }
 
 // ─── PHOTO UPLOAD ─────────────────────────────────────────────
@@ -279,39 +258,69 @@ function setupPhotoUpload() {
   input.addEventListener('change', e => loadPhoto(e.target.files[0]));
   zone.addEventListener('dragover',  e => { e.preventDefault(); zone.style.borderColor='#D91B1B'; });
   zone.addEventListener('dragleave', () => { zone.style.borderColor=''; });
-  zone.addEventListener('drop', e => { e.preventDefault(); zone.style.borderColor=''; if(e.dataTransfer.files[0]) loadPhoto(e.dataTransfer.files[0]); });
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.style.borderColor='';
+    if (e.dataTransfer.files[0]) loadPhoto(e.dataTransfer.files[0]);
+  });
   function loadPhoto(file) {
-    if(!file) return;
+    if (!file) return;
     const r = new FileReader();
-    r.onload = ev => { const img=new Image(); img.onload=()=>{userPhoto=img;prev.src=ev.target.result;zone.classList.add('has');}; img.src=ev.target.result; };
+    r.onload = ev => {
+      const img = new Image();
+      img.onload = () => { userPhoto = img; prev.src = ev.target.result; zone.classList.add('has'); };
+      img.src = ev.target.result;
+    };
     r.readAsDataURL(file);
   }
 }
 
-// ─── API: JSONP (contorna CORS do Apps Script) ────────────────
-function jsonpFetch(url) {
+// ─── API CALL: JSONP (único método que funciona 100% com Apps Script + CORS) ──
+function jsonpCall(params) {
   return new Promise((resolve, reject) => {
-    const cbName = 'ng_cb_' + Date.now();
+    const cbName = '_ng' + Date.now() + Math.floor(Math.random()*1000);
     const script = document.createElement('script');
-    const timeout = setTimeout(() => {
+    let done = false;
+
+    const timer = setTimeout(() => {
+      if (done) return;
+      done = true;
       cleanup();
-      reject(new Error('Timeout na requisição'));
-    }, 20000);
-    window[cbName] = (data) => { cleanup(); resolve(data); };
-    function cleanup() { clearTimeout(timeout); delete window[cbName]; if(script.parentNode) script.parentNode.removeChild(script); }
-    script.onerror = () => { cleanup(); reject(new Error('Erro de rede')); };
-    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
+      reject(new Error('Tempo esgotado. Verifique se o Apps Script está publicado corretamente.'));
+    }, 25000);
+
+    window[cbName] = (data) => {
+      if (done) return;
+      done = true;
+      cleanup();
+      resolve(data);
+    };
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    script.onerror = () => {
+      if (done) return;
+      done = true;
+      cleanup();
+      reject(new Error('Erro de rede ao chamar o servidor.'));
+    };
+
+    // Monta URL com todos os parâmetros + callback
+    const qs = Object.entries(params).map(([k,v]) => k + '=' + encodeURIComponent(v)).join('&');
+    script.src = SCRIPT_URL + '?' + qs + '&callback=' + cbName;
     document.head.appendChild(script);
   });
 }
 
-// POST usa fetch normal (Apps Script aceita POST cross-origin no modo no-cors,
-// mas não retorna body — então usamos redirect para a URL de exec que já tem CORS ok)
-async function apiFetch(url, body) {
-  const res = await fetch(url, {
-    method: 'POST',
-    body: JSON.stringify(body),
-    headers: { 'Content-Type': 'text/plain' } // evita preflight CORS
+// POST: usa fetch com Content-Type text/plain para evitar preflight CORS
+async function apiPost(body) {
+  const res = await fetch(SCRIPT_URL, {
+    method:  'POST',
+    body:    JSON.stringify(body),
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
   });
   return res.json();
 }
@@ -319,28 +328,34 @@ async function apiFetch(url, body) {
 // ─── LOAD LAYOUTS ─────────────────────────────────────────────
 async function loadLayouts() {
   showLoading('Carregando layouts...');
+  hideError();
   try {
-    const data = await jsonpFetch(SCRIPT_URL + '?action=getLayouts');
+    const data = await jsonpCall({ action: 'getLayouts' });
     if (data.ok) {
-      layouts = data.layouts;
+      layouts = data.layouts || [];
       renderLayoutsList();
-      toast('Layouts carregados: ' + layouts.length, 'success');
+      if (layouts.length > 0) toast('✓ ' + layouts.length + ' layout(s) carregado(s)', 'success');
     } else {
-      toast('Erro: ' + data.error, 'error');
+      showError('⚠️ Erro do servidor: ' + data.error);
     }
   } catch(e) {
-    toast('Não foi possível conectar: ' + e.message, 'error');
-    document.getElementById('connBanner').classList.add('show');
+    showError(
+      '⚠️ Não foi possível conectar ao servidor.<br>' +
+      '<strong>Verifique:</strong><br>' +
+      '1. O Apps Script está publicado como <strong>"Qualquer pessoa"</strong> (não precisa de conta Google)<br>' +
+      '2. Após publicar, clique em <strong>Implantar → Gerenciar → editar → Nova versão</strong><br>' +
+      '<small style="color:#666;margin-top:6px;display:block">Detalhe: ' + e.message + '</small>'
+    );
   } finally {
     hideLoading();
   }
 }
 
-// ─── FETCH IMAGE (JSONP) ──────────────────────────────────────
+// ─── FETCH IMAGE VIA JSONP ────────────────────────────────────
 async function fetchLayoutImage(fileId) {
   if (!fileId) return null;
   try {
-    const data = await jsonpFetch(SCRIPT_URL + '?action=getImage&fileId=' + fileId);
+    const data = await jsonpCall({ action: 'getImage', fileId: fileId });
     if (!data.ok) return null;
     return new Promise(resolve => {
       const img = new Image();
@@ -355,10 +370,16 @@ async function fetchLayoutImage(fileId) {
 function renderLayoutsList() {
   const container = document.getElementById('layoutsList');
   container.innerHTML = '';
+
   if (!layouts.length) {
-    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text4);font-size:13px;">Nenhum layout cadastrado.<br><span style="color:var(--text3)">Clique em <strong>+ Novo Layout</strong> para adicionar.</span></div>';
+    container.innerHTML = `
+      <div style="text-align:center;padding:48px 24px;color:var(--text4);font-size:13px;line-height:1.8;">
+        Nenhum layout cadastrado ainda.<br>
+        <span style="color:var(--text3)">Clique em <strong>＋ Novo Layout</strong> para adicionar.</span>
+      </div>`;
     return;
   }
+
   layouts.forEach((layout, i) => {
     const item = document.createElement('div');
     item.className = 'layout-item';
@@ -367,15 +388,14 @@ function renderLayoutsList() {
         ${layout.driveFileId ? `<img src="" alt="" id="timg-${layout.id}" />` : '📋'}
       </div>
       <div class="layout-info">
-        <div class="layout-name">${layout.name || 'Layout '+(i+1)}</div>
+        <div class="layout-name">${layout.name || 'Layout ' + (i+1)}</div>
         <div class="layout-meta">
-          <span>ID: ${layout.id}</span>
-          ${layout.uploadedAt?`<span>📅 ${layout.uploadedAt}</span>`:''}
-          ${layout.uploadedBy?`<span>👤 ${layout.uploadedBy}</span>`:''}
+          ${layout.uploadedAt ? `<span>📅 ${layout.uploadedAt}</span>` : ''}
+          ${layout.uploadedBy ? `<span>👤 ${layout.uploadedBy}</span>` : ''}
         </div>
         <div style="margin-top:6px">
-          <span class="layout-status ${layout.driveFileId?'ok':'empty'}">
-            ${layout.driveFileId?'✓ Imagem carregada':'⚠ Sem imagem'}
+          <span class="layout-status ${layout.driveFileId ? 'ok' : 'empty'}">
+            ${layout.driveFileId ? '✓ Imagem carregada' : '⚠ Sem imagem'}
           </span>
         </div>
       </div>
@@ -387,64 +407,89 @@ function renderLayoutsList() {
         <button class="btn-del-layout" onclick="deleteLayout('${layout.id}')" title="Remover">✕</button>
       </div>`;
     container.appendChild(item);
+
+    // Thumb async
     if (layout.driveFileId) {
       fetchLayoutImage(layout.driveFileId).then(img => {
-        if (img) { const el = document.getElementById('timg-'+layout.id); if(el) el.src=img.src; }
+        if (img) {
+          const el = document.getElementById('timg-' + layout.id);
+          if (el) el.src = img.src;
+        }
       });
     }
   });
 }
 
-// ─── UPLOAD DE LAYOUT ─────────────────────────────────────────
+// ─── UPLOAD LAYOUT ────────────────────────────────────────────
 function promptNewLayout(input) {
   const file = input.files[0];
   if (!file) return;
   const name = prompt('Nome deste layout (ex: AgoraMT, TV Cidade, JovemPan):');
-  if (!name) return;
+  if (!name) { input.value=''; return; }
   uploadLayoutFile('layout_' + Date.now(), name, file);
 }
+
 function replaceLayout(id, name, input) {
   const file = input.files[0];
   if (!file) return;
+  if (!confirm('Substituir o layout "' + name + '"? A imagem atual será substituída para toda a equipe.')) {
+    input.value = ''; return;
+  }
   uploadLayoutFile(id, name, file);
 }
+
 async function uploadLayoutFile(id, name, file) {
-  if (!SCRIPT_URL) { promptConfig(); return; }
-  showLoading('Salvando layout "' + name + '" no Drive...');
+  showLoading('Salvando "' + name + '" no Drive...');
   try {
-    const b64 = await fileToBase64(file);
-    const data = await apiFetch(SCRIPT_URL, {
-      action: 'uploadLayout', layoutId: id, layoutName: name,
-      base64: b64.split(',')[1], mime: file.type, filename: file.name,
+    const b64  = await fileToBase64(file);
+    const data = await apiPost({
+      action:     'uploadLayout',
+      layoutId:   id,
+      layoutName: name,
+      base64:     b64.split(',')[1],
+      mime:       file.type,
+      filename:   file.name,
       uploadedBy: document.getElementById('operador').value.trim() || 'Equipe'
     });
-    if (data.ok) { toast('Layout "'+name+'" salvo!', 'success'); await loadLayouts(); }
-    else toast('Erro: ' + data.error, 'error');
-  } catch(e) { toast('Falha: ' + e.message, 'error'); }
-  finally { hideLoading(); }
+    if (data.ok) {
+      toast('✓ Layout "' + name + '" salvo!', 'success');
+      await loadLayouts();
+    } else {
+      toast('Erro: ' + data.error, 'error');
+    }
+  } catch(e) {
+    toast('Falha ao salvar: ' + e.message, 'error');
+  } finally {
+    hideLoading();
+  }
 }
+
 async function deleteLayout(id) {
-  if (!confirm('Remover este layout? Não pode ser desfeito.')) return;
+  if (!confirm('Remover este layout? Esta ação não pode ser desfeita.')) return;
   showLoading('Removendo...');
   try {
-    const data = await apiFetch(SCRIPT_URL, { action: 'deleteLayout', layoutId: id });
+    const data = await apiPost({ action: 'deleteLayout', layoutId: id });
     if (data.ok) { toast('Layout removido.', 'success'); await loadLayouts(); }
     else toast('Erro: ' + data.error, 'error');
-  } catch(e) { toast('Falha: ' + e.message, 'error'); }
-  finally { hideLoading(); }
+  } catch(e) {
+    toast('Falha: ' + e.message, 'error');
+  } finally {
+    hideLoading();
+  }
 }
 
 // ─── GERAR POSTS ──────────────────────────────────────────────
 async function generateAll() {
   const titulo  = document.getElementById('titulo').value.trim();
   const noticia = document.getElementById('noticia').value.trim();
+
   if (!titulo && !noticia) { toast('Preencha o título ou o texto da notícia.', 'error'); return; }
-  if (!layouts.length) { toast('Nenhum layout cadastrado. Acesse "Gerenciar Layouts".', 'error'); return; }
-  if (!SCRIPT_URL) { promptConfig(); return; }
+  if (!layouts.length)     { toast('Nenhum layout cadastrado. Vá em "Gerenciar Layouts".', 'error'); return; }
 
   const btn = document.getElementById('btnGenerate');
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Gerando...';
+  hideError();
 
   document.getElementById('placeholder').style.display = 'none';
   const grid = document.getElementById('postsGrid');
@@ -463,12 +508,14 @@ async function generateAll() {
       const btnDl = card.querySelector('.btn-dl');
       btnDl.onclick = () => {
         const a = document.createElement('a');
-        a.download = 'news-' + (layout.name||layout.id).replace(/\s+/g,'_') + '.png';
+        a.download = 'news-' + (layout.name || layout.id).replace(/\s+/g,'_') + '.png';
         a.href = canvas.toDataURL('image/png');
         a.click();
       };
     }
-    toast('Posts gerados com sucesso!', 'success');
+    toast('✓ Posts gerados com sucesso!', 'success');
+  } catch(e) {
+    toast('Erro ao gerar: ' + e.message, 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '▶ Gerar os 3 Posts';
@@ -482,7 +529,7 @@ function createPostCard(layout, index) {
   card.innerHTML = `
     <div class="post-label">
       <div class="post-num">${index+1}</div>
-      ${layout.name || 'Layout '+(index+1)}
+      ${layout.name || 'Layout ' + (index+1)}
     </div>
     <div class="canvas-wrap">
       <canvas width="${CW}" height="${CH}" style="width:338px;height:600px"></canvas>
@@ -496,52 +543,83 @@ function createPostCard(layout, index) {
 async function renderPost(canvas, baseImg, titulo, noticia) {
   const ctx = canvas.getContext('2d');
   canvas.width = CW; canvas.height = CH;
-  if (baseImg) { ctx.drawImage(baseImg, 0, 0, CW, CH); }
-  else { ctx.fillStyle='#1a1a1a'; ctx.fillRect(0,0,CW,CH); }
+
+  // 1. Imagem base (layout)
+  if (baseImg) {
+    ctx.drawImage(baseImg, 0, 0, CW, CH);
+  } else {
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(0, 0, CW, CH);
+    ctx.fillStyle = '#333';
+    ctx.font = '32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Layout não encontrado', CW/2, CH/2);
+  }
+
+  // 2. Foto do usuário
   if (userPhoto) {
     const p = TC.foto;
-    ctx.save(); ctx.beginPath(); ctx.rect(p.x,p.y,p.w,p.h); ctx.clip();
-    const scale = Math.max(p.w/userPhoto.width, p.h/userPhoto.height);
-    const sw = userPhoto.width*scale, sh = userPhoto.height*scale;
-    ctx.drawImage(userPhoto, p.x+(p.w-sw)/2, p.y+(p.h-sh)/2, sw, sh);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(p.x, p.y, p.w, p.h);
+    ctx.clip();
+    const scale = Math.max(p.w / userPhoto.width, p.h / userPhoto.height);
+    const sw = userPhoto.width * scale, sh = userPhoto.height * scale;
+    ctx.drawImage(userPhoto, p.x + (p.w-sw)/2, p.y + (p.h-sh)/2, sw, sh);
     ctx.restore();
   }
+
+  // 3. Título
   if (titulo) {
     const t = TC.titulo;
-    ctx.font = `900 ${t.size}px 'Barlow Condensed',sans-serif`;
-    ctx.fillStyle='#fff'; ctx.textAlign='left';
-    ctx.shadowColor='rgba(0,0,0,.6)'; ctx.shadowBlur=8;
+    ctx.font = `900 ${t.size}px 'Barlow Condensed', sans-serif`;
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left';
+    ctx.shadowColor = 'rgba(0,0,0,.65)';
+    ctx.shadowBlur = 10;
     wrapText(ctx, titulo.toUpperCase(), t.x, t.y, t.maxW, t.lineH);
-    ctx.shadowBlur=0;
+    ctx.shadowBlur = 0;
   }
+
+  // 4. Notícia
   if (noticia) {
     const n = TC.noticia;
-    ctx.font = `800 ${n.size}px 'Barlow Condensed',sans-serif`;
-    ctx.fillStyle='#fff'; ctx.textAlign='left';
-    ctx.shadowColor='rgba(0,0,0,.5)'; ctx.shadowBlur=6;
+    ctx.font = `800 ${n.size}px 'Barlow Condensed', sans-serif`;
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left';
+    ctx.shadowColor = 'rgba(0,0,0,.5)';
+    ctx.shadowBlur = 6;
     wrapText(ctx, noticia.toUpperCase(), n.x, n.y, n.maxW, n.lineH);
-    ctx.shadowBlur=0;
+    ctx.shadowBlur = 0;
   }
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────
 function wrapText(ctx, text, x, y, maxW, lh) {
   const words = text.split(' ');
-  let line='', lines=[];
+  let line = '', lines = [];
   for (const w of words) {
-    const test = line+w+' ';
-    if (ctx.measureText(test).width > maxW && line) { lines.push(line.trim()); line=w+' '; }
-    else line=test;
+    const test = line + w + ' ';
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line.trim()); line = w + ' '; }
+    else line = test;
   }
   if (line.trim()) lines.push(line.trim());
-  lines.forEach((l,i) => ctx.fillText(l, x, y+i*lh));
+  lines.forEach((l, i) => ctx.fillText(l, x, y + i * lh));
   return lines.length;
 }
+
 function fileToBase64(file) {
-  return new Promise((res,rej) => { const r=new FileReader(); r.onload=e=>res(e.target.result); r.onerror=rej; r.readAsDataURL(file); });
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
 }
 
-document.addEventListener('keydown', e => { if((e.ctrlKey||e.metaKey)&&e.key==='Enter') generateAll(); });
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') generateAll();
+});
 </script>
 </body>
 </html>
