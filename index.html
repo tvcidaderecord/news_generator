@@ -132,9 +132,9 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
       </div>
       <div class="field">
         <label>Título da Notícia</label>
-        <input type="text" id="titulo" placeholder="Título em destaque..." maxlength="80"
-          oninput="document.getElementById('cTitulo').textContent=this.value.length+'/80'" />
-        <div class="char-count"><span id="cTitulo">0/80</span></div>
+        <input type="text" id="titulo" placeholder="Título em destaque..." maxlength="60"
+          oninput="document.getElementById('cTitulo').textContent=this.value.length+'/60'" />
+        <div class="char-count"><span id="cTitulo">0/60</span></div>
       </div>
       <div class="field">
         <label>Texto da Notícia</label>
@@ -160,8 +160,6 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
   </aside>
 
   <main class="output">
-
-    <!-- Tab: Gerar -->
     <div class="tab-content active" id="tab-content-gerar">
       <div class="error-box" id="errorBox"></div>
       <div class="placeholder" id="placeholder">
@@ -177,7 +175,6 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
       <div class="posts-grid" id="postsGrid" style="display:none"></div>
     </div>
 
-    <!-- Tab: Layouts -->
     <div class="tab-content" id="tab-content-layouts">
       <div class="layouts-manager">
         <div class="manager-header">
@@ -193,343 +190,267 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
         </div>
       </div>
     </div>
-
   </main>
 </div>
 
 <script>
-// ─── URL GRAVADA (não precisa configurar) ─────────────────────
+// ─── CONFIG ───────────────────────────────────────────────────
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbywLVWV2O7AgnS2rtb1uKqJgk3XnzRtS2OausYfbW7Zx0LUTSWqwkvBEDKleq5uqj2n/exec';
 
-// Posições fixas dos textos no canvas (1080x1920)
-const TC = {
-  titulo:  { x: 60, y: 1164, maxW: 960, lineH: 72, size: 60 },
-  noticia: { x: 60, y: 1290, maxW: 960, lineH: 68, size: 52 },
-  foto:    { x: 0,  y: 428,  w: 1080,  h: 632 }
-};
+// Canvas nativo 1080x1920
 const CW = 1080, CH = 1920;
+
+// ─── POSIÇÕES DOS TEXTOS (medidas pixel a pixel nos templates) ─
+//
+// TÍTULO: dentro da caixa vermelha no header
+//   Caixa vermelha: x=120–509, y=325–380 (largura=389, altura=55px)
+//   Texto centralizado verticalmente na caixa
+//   Fonte grande o suficiente para preencher bem, mas cabe em 1 linha
+//
+// NOTÍCIA: logo após a linha vermelha separadora inferior
+//   Linha vermelha sep2: y=1060–1070
+//   Texto começa em y=1071 + padding
+//   Margem esquerda: x=90 (após barra lateral vermelha)
+//   Largura máxima: 960px
+//   Linha height: 68px, fonte 52px
+
+const TC = {
+  titulo: {
+    boxX: 120, boxY: 325, boxW: 389, boxH: 55,   // caixa vermelha exata
+    x: 136,                                         // margem interna esquerda
+    yBase: 370,                                     // baseline do texto
+    maxW: 350,                                      // largura máxima (dentro da caixa)
+    size: 34,                                       // fonte em px
+  },
+  noticia: {
+    x: 90,          // após a barra lateral vermelha
+    yStart: 1145,   // y=1071 (início texto) + 74px de padding
+    maxW: 950,
+    lineH: 70,
+    size: 54,
+  },
+  foto: {
+    x: 0, y: 423, w: 1080, h: 637   // área da imagem (entre sep1 e sep2)
+  }
+};
 
 let layouts   = [];
 let userPhoto = null;
 
 // ─── INIT ─────────────────────────────────────────────────────
-window.addEventListener('load', () => {
-  setupPhotoUpload();
-  loadLayouts();
-});
+window.addEventListener('load', () => { setupPhotoUpload(); loadLayouts(); });
 
 // ─── TABS ─────────────────────────────────────────────────────
-function switchTab(tab) {
+function switchTab(t) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.btn-tab').forEach(el => el.classList.remove('active'));
-  document.getElementById('tab-content-' + tab).classList.add('active');
-  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('tab-content-'+t).classList.add('active');
+  document.getElementById('tab-'+t).classList.add('active');
 }
 
-// ─── UI HELPERS ───────────────────────────────────────────────
-function showLoading(msg) {
-  document.getElementById('loadingMsg').textContent = msg || 'Aguarde...';
-  document.getElementById('loadingOverlay').classList.remove('hidden');
-}
-function hideLoading() {
-  document.getElementById('loadingOverlay').classList.add('hidden');
-}
-function toast(msg, type) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'toast show ' + (type || '');
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('show'), 4000);
-}
-function showError(msg) {
-  const el = document.getElementById('errorBox');
-  el.innerHTML = msg;
-  el.classList.add('show');
-}
-function hideError() {
-  document.getElementById('errorBox').classList.remove('show');
-}
+// ─── UI ───────────────────────────────────────────────────────
+function showLoading(msg){ document.getElementById('loadingMsg').textContent=msg||'Aguarde...'; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+function hideLoading(){ document.getElementById('loadingOverlay').classList.add('hidden'); }
+function toast(msg,type){ const el=document.getElementById('toast'); el.textContent=msg; el.className='toast show '+(type||''); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),4000); }
+function showError(msg){ const el=document.getElementById('errorBox'); el.innerHTML=msg; el.classList.add('show'); }
+function hideError(){ document.getElementById('errorBox').classList.remove('show'); }
 
 // ─── PHOTO UPLOAD ─────────────────────────────────────────────
-function setupPhotoUpload() {
-  const zone  = document.getElementById('uploadZone');
-  const input = document.getElementById('fileInput');
-  const prev  = document.getElementById('photoPreview');
-  input.addEventListener('change', e => loadPhoto(e.target.files[0]));
-  zone.addEventListener('dragover',  e => { e.preventDefault(); zone.style.borderColor='#D91B1B'; });
-  zone.addEventListener('dragleave', () => { zone.style.borderColor=''; });
-  zone.addEventListener('drop', e => {
-    e.preventDefault(); zone.style.borderColor='';
-    if (e.dataTransfer.files[0]) loadPhoto(e.dataTransfer.files[0]);
-  });
-  function loadPhoto(file) {
-    if (!file) return;
-    const r = new FileReader();
-    r.onload = ev => {
-      const img = new Image();
-      img.onload = () => { userPhoto = img; prev.src = ev.target.result; zone.classList.add('has'); };
-      img.src = ev.target.result;
-    };
+function setupPhotoUpload(){
+  const zone=document.getElementById('uploadZone'),input=document.getElementById('fileInput'),prev=document.getElementById('photoPreview');
+  input.addEventListener('change',e=>loadPhoto(e.target.files[0]));
+  zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.borderColor='#D91B1B';});
+  zone.addEventListener('dragleave',()=>{zone.style.borderColor='';});
+  zone.addEventListener('drop',e=>{e.preventDefault();zone.style.borderColor='';if(e.dataTransfer.files[0])loadPhoto(e.dataTransfer.files[0]);});
+  function loadPhoto(file){
+    if(!file)return;
+    const r=new FileReader();
+    r.onload=ev=>{const img=new Image();img.onload=()=>{userPhoto=img;prev.src=ev.target.result;zone.classList.add('has');};img.src=ev.target.result;};
     r.readAsDataURL(file);
   }
 }
 
-// ─── API CALL: JSONP (único método que funciona 100% com Apps Script + CORS) ──
-function jsonpCall(params) {
-  return new Promise((resolve, reject) => {
-    const cbName = '_ng' + Date.now() + Math.floor(Math.random()*1000);
-    const script = document.createElement('script');
-    let done = false;
-
-    const timer = setTimeout(() => {
-      if (done) return;
-      done = true;
-      cleanup();
-      reject(new Error('Tempo esgotado. Verifique se o Apps Script está publicado corretamente.'));
-    }, 25000);
-
-    window[cbName] = (data) => {
-      if (done) return;
-      done = true;
-      cleanup();
-      resolve(data);
-    };
-
-    function cleanup() {
-      clearTimeout(timer);
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    script.onerror = () => {
-      if (done) return;
-      done = true;
-      cleanup();
-      reject(new Error('Erro de rede ao chamar o servidor.'));
-    };
-
-    // Monta URL com todos os parâmetros + callback
-    const qs = Object.entries(params).map(([k,v]) => k + '=' + encodeURIComponent(v)).join('&');
-    script.src = SCRIPT_URL + '?' + qs + '&callback=' + cbName;
+// ─── JSONP (contorna CORS do Apps Script) ─────────────────────
+function jsonpCall(params){
+  return new Promise((resolve,reject)=>{
+    const cb='_ng'+Date.now()+Math.floor(Math.random()*9999);
+    const script=document.createElement('script');
+    let done=false;
+    const timer=setTimeout(()=>{if(done)return;done=true;cleanup();reject(new Error('Tempo esgotado. Verifique se o Apps Script está publicado como "Qualquer pessoa".'));},25000);
+    window[cb]=(data)=>{if(done)return;done=true;cleanup();resolve(data);};
+    function cleanup(){clearTimeout(timer);delete window[cb];if(script.parentNode)script.parentNode.removeChild(script);}
+    script.onerror=()=>{if(done)return;done=true;cleanup();reject(new Error('Erro de rede.'));};
+    const qs=Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
+    script.src=SCRIPT_URL+'?'+qs+'&callback='+cb;
     document.head.appendChild(script);
   });
 }
 
-// POST: usa fetch com Content-Type text/plain para evitar preflight CORS
-async function apiPost(body) {
-  const res = await fetch(SCRIPT_URL, {
-    method:  'POST',
-    body:    JSON.stringify(body),
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
-  });
+async function apiPost(body){
+  const res=await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(body),headers:{'Content-Type':'text/plain;charset=utf-8'}});
   return res.json();
 }
 
 // ─── LOAD LAYOUTS ─────────────────────────────────────────────
-async function loadLayouts() {
+async function loadLayouts(){
   showLoading('Carregando layouts...');
   hideError();
-  try {
-    const data = await jsonpCall({ action: 'getLayouts' });
-    if (data.ok) {
-      layouts = data.layouts || [];
+  try{
+    const data=await jsonpCall({action:'getLayouts'});
+    if(data.ok){
+      layouts=data.layouts||[];
       renderLayoutsList();
-      if (layouts.length > 0) toast('✓ ' + layouts.length + ' layout(s) carregado(s)', 'success');
+      if(layouts.length>0) toast('✓ '+layouts.length+' layout(s) carregado(s)','success');
     } else {
-      showError('⚠️ Erro do servidor: ' + data.error);
+      showError('⚠️ Erro do servidor: '+data.error);
     }
-  } catch(e) {
+  } catch(e){
     showError(
-      '⚠️ Não foi possível conectar ao servidor.<br>' +
-      '<strong>Verifique:</strong><br>' +
-      '1. O Apps Script está publicado como <strong>"Qualquer pessoa"</strong> (não precisa de conta Google)<br>' +
-      '2. Após publicar, clique em <strong>Implantar → Gerenciar → editar → Nova versão</strong><br>' +
-      '<small style="color:#666;margin-top:6px;display:block">Detalhe: ' + e.message + '</small>'
+      '⚠️ Não foi possível conectar ao servidor.<br>'+
+      '<strong>Verifique:</strong><br>'+
+      '1. O Apps Script está publicado como <strong>"Qualquer pessoa"</strong><br>'+
+      '2. Após qualquer edição, crie uma <strong>Nova Versão</strong> na implantação<br>'+
+      '<small style="color:#666;margin-top:6px;display:block">Detalhe: '+e.message+'</small>'
     );
-  } finally {
-    hideLoading();
-  }
+  } finally { hideLoading(); }
 }
 
-// ─── FETCH IMAGE VIA JSONP ────────────────────────────────────
-async function fetchLayoutImage(fileId) {
-  if (!fileId) return null;
-  try {
-    const data = await jsonpCall({ action: 'getImage', fileId: fileId });
-    if (!data.ok) return null;
-    return new Promise(resolve => {
-      const img = new Image();
-      img.onload  = () => resolve(img);
-      img.onerror = () => resolve(null);
-      img.src = 'data:' + data.mime + ';base64,' + data.base64;
+// ─── FETCH IMAGE ──────────────────────────────────────────────
+async function fetchLayoutImage(fileId){
+  if(!fileId) return null;
+  try{
+    const data=await jsonpCall({action:'getImage',fileId:fileId});
+    if(!data.ok) return null;
+    return new Promise(resolve=>{
+      const img=new Image();
+      img.onload=()=>resolve(img);
+      img.onerror=()=>resolve(null);
+      img.src='data:'+data.mime+';base64,'+data.base64;
     });
-  } catch(e) { return null; }
+  } catch(e){ return null; }
 }
 
-// ─── RENDER LAYOUTS MANAGER ───────────────────────────────────
-function renderLayoutsList() {
-  const container = document.getElementById('layoutsList');
-  container.innerHTML = '';
-
-  if (!layouts.length) {
-    container.innerHTML = `
-      <div style="text-align:center;padding:48px 24px;color:var(--text4);font-size:13px;line-height:1.8;">
-        Nenhum layout cadastrado ainda.<br>
-        <span style="color:var(--text3)">Clique em <strong>＋ Novo Layout</strong> para adicionar.</span>
-      </div>`;
+// ─── LAYOUTS MANAGER ──────────────────────────────────────────
+function renderLayoutsList(){
+  const c=document.getElementById('layoutsList');
+  c.innerHTML='';
+  if(!layouts.length){
+    c.innerHTML='<div style="text-align:center;padding:48px 24px;color:var(--text4);font-size:13px;line-height:1.8;">Nenhum layout cadastrado.<br><span style="color:var(--text3)">Clique em <strong>＋ Novo Layout</strong> para adicionar.</span></div>';
     return;
   }
-
-  layouts.forEach((layout, i) => {
-    const item = document.createElement('div');
-    item.className = 'layout-item';
-    item.innerHTML = `
+  layouts.forEach((layout,i)=>{
+    const item=document.createElement('div');
+    item.className='layout-item';
+    item.innerHTML=`
       <div class="layout-thumb" id="thumb-${layout.id}">
-        ${layout.driveFileId ? `<img src="" alt="" id="timg-${layout.id}" />` : '📋'}
+        ${layout.driveFileId?`<img src="" alt="" id="timg-${layout.id}"/>`:'📋'}
       </div>
       <div class="layout-info">
-        <div class="layout-name">${layout.name || 'Layout ' + (i+1)}</div>
+        <div class="layout-name">${layout.name||'Layout '+(i+1)}</div>
         <div class="layout-meta">
-          ${layout.uploadedAt ? `<span>📅 ${layout.uploadedAt}</span>` : ''}
-          ${layout.uploadedBy ? `<span>👤 ${layout.uploadedBy}</span>` : ''}
+          ${layout.uploadedAt?`<span>📅 ${layout.uploadedAt}</span>`:''}
+          ${layout.uploadedBy?`<span>👤 ${layout.uploadedBy}</span>`:''}
         </div>
         <div style="margin-top:6px">
-          <span class="layout-status ${layout.driveFileId ? 'ok' : 'empty'}">
-            ${layout.driveFileId ? '✓ Imagem carregada' : '⚠ Sem imagem'}
+          <span class="layout-status ${layout.driveFileId?'ok':'empty'}">
+            ${layout.driveFileId?'✓ Imagem carregada':'⚠ Sem imagem'}
           </span>
         </div>
       </div>
       <div class="layout-actions">
         <label class="btn-upload-layout">
-          <input type="file" accept="image/*" onchange="replaceLayout('${layout.id}','${layout.name}',this)" />
+          <input type="file" accept="image/*" onchange="replaceLayout('${layout.id}','${layout.name}',this)"/>
           🔄 Substituir
         </label>
         <button class="btn-del-layout" onclick="deleteLayout('${layout.id}')" title="Remover">✕</button>
       </div>`;
-    container.appendChild(item);
-
-    // Thumb async
-    if (layout.driveFileId) {
-      fetchLayoutImage(layout.driveFileId).then(img => {
-        if (img) {
-          const el = document.getElementById('timg-' + layout.id);
-          if (el) el.src = img.src;
-        }
+    c.appendChild(item);
+    if(layout.driveFileId){
+      fetchLayoutImage(layout.driveFileId).then(img=>{
+        if(img){const el=document.getElementById('timg-'+layout.id);if(el)el.src=img.src;}
       });
     }
   });
 }
 
-// ─── UPLOAD LAYOUT ────────────────────────────────────────────
-function promptNewLayout(input) {
-  const file = input.files[0];
-  if (!file) return;
-  const name = prompt('Nome deste layout (ex: AgoraMT, TV Cidade, JovemPan):');
-  if (!name) { input.value=''; return; }
-  uploadLayoutFile('layout_' + Date.now(), name, file);
+function promptNewLayout(input){
+  const file=input.files[0]; if(!file)return;
+  const name=prompt('Nome deste layout (ex: AgoraMT, TV Cidade, JovemPan):');
+  if(!name){input.value='';return;}
+  uploadLayoutFile('layout_'+Date.now(),name,file);
 }
-
-function replaceLayout(id, name, input) {
-  const file = input.files[0];
-  if (!file) return;
-  if (!confirm('Substituir o layout "' + name + '"? A imagem atual será substituída para toda a equipe.')) {
-    input.value = ''; return;
-  }
-  uploadLayoutFile(id, name, file);
+function replaceLayout(id,name,input){
+  const file=input.files[0]; if(!file)return;
+  if(!confirm('Substituir o layout "'+name+'"? Será atualizado para toda a equipe.')){input.value='';return;}
+  uploadLayoutFile(id,name,file);
 }
-
-async function uploadLayoutFile(id, name, file) {
-  showLoading('Salvando "' + name + '" no Drive...');
-  try {
-    const b64  = await fileToBase64(file);
-    const data = await apiPost({
-      action:     'uploadLayout',
-      layoutId:   id,
-      layoutName: name,
-      base64:     b64.split(',')[1],
-      mime:       file.type,
-      filename:   file.name,
-      uploadedBy: document.getElementById('operador').value.trim() || 'Equipe'
-    });
-    if (data.ok) {
-      toast('✓ Layout "' + name + '" salvo!', 'success');
-      await loadLayouts();
-    } else {
-      toast('Erro: ' + data.error, 'error');
-    }
-  } catch(e) {
-    toast('Falha ao salvar: ' + e.message, 'error');
-  } finally {
-    hideLoading();
-  }
+async function uploadLayoutFile(id,name,file){
+  showLoading('Salvando "'+name+'" no Drive...');
+  try{
+    const b64=await fileToBase64(file);
+    const data=await apiPost({action:'uploadLayout',layoutId:id,layoutName:name,base64:b64.split(',')[1],mime:file.type,filename:file.name,uploadedBy:document.getElementById('operador').value.trim()||'Equipe'});
+    if(data.ok){toast('✓ Layout "'+name+'" salvo!','success');await loadLayouts();}
+    else toast('Erro: '+data.error,'error');
+  }catch(e){toast('Falha: '+e.message,'error');}
+  finally{hideLoading();}
 }
-
-async function deleteLayout(id) {
-  if (!confirm('Remover este layout? Esta ação não pode ser desfeita.')) return;
+async function deleteLayout(id){
+  if(!confirm('Remover este layout? Não pode ser desfeito.'))return;
   showLoading('Removendo...');
-  try {
-    const data = await apiPost({ action: 'deleteLayout', layoutId: id });
-    if (data.ok) { toast('Layout removido.', 'success'); await loadLayouts(); }
-    else toast('Erro: ' + data.error, 'error');
-  } catch(e) {
-    toast('Falha: ' + e.message, 'error');
-  } finally {
-    hideLoading();
-  }
+  try{
+    const data=await apiPost({action:'deleteLayout',layoutId:id});
+    if(data.ok){toast('Layout removido.','success');await loadLayouts();}
+    else toast('Erro: '+data.error,'error');
+  }catch(e){toast('Falha: '+e.message,'error');}
+  finally{hideLoading();}
 }
 
 // ─── GERAR POSTS ──────────────────────────────────────────────
-async function generateAll() {
-  const titulo  = document.getElementById('titulo').value.trim();
-  const noticia = document.getElementById('noticia').value.trim();
+async function generateAll(){
+  const titulo=document.getElementById('titulo').value.trim();
+  const noticia=document.getElementById('noticia').value.trim();
+  if(!titulo&&!noticia){toast('Preencha o título ou o texto da notícia.','error');return;}
+  if(!layouts.length){toast('Nenhum layout cadastrado. Vá em "Gerenciar Layouts".','error');return;}
 
-  if (!titulo && !noticia) { toast('Preencha o título ou o texto da notícia.', 'error'); return; }
-  if (!layouts.length)     { toast('Nenhum layout cadastrado. Vá em "Gerenciar Layouts".', 'error'); return; }
-
-  const btn = document.getElementById('btnGenerate');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Gerando...';
+  const btn=document.getElementById('btnGenerate');
+  btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Gerando...';
   hideError();
+  document.getElementById('placeholder').style.display='none';
+  const grid=document.getElementById('postsGrid');
+  grid.style.display='grid'; grid.innerHTML='';
 
-  document.getElementById('placeholder').style.display = 'none';
-  const grid = document.getElementById('postsGrid');
-  grid.style.display = 'grid';
-  grid.innerHTML = '';
-
-  try {
-    for (let i = 0; i < layouts.length; i++) {
-      const layout = layouts[i];
-      const card   = createPostCard(layout, i);
+  try{
+    for(let i=0;i<layouts.length;i++){
+      const layout=layouts[i];
+      const card=createPostCard(layout,i);
       grid.appendChild(card);
-      const canvas = card.querySelector('canvas');
-      showLoading('Gerando post ' + (i+1) + ' de ' + layouts.length + '...');
-      const baseImg = await fetchLayoutImage(layout.driveFileId);
-      await renderPost(canvas, baseImg, titulo, noticia);
-      const btnDl = card.querySelector('.btn-dl');
-      btnDl.onclick = () => {
-        const a = document.createElement('a');
-        a.download = 'news-' + (layout.name || layout.id).replace(/\s+/g,'_') + '.png';
-        a.href = canvas.toDataURL('image/png');
-        a.click();
+      const canvas=card.querySelector('canvas');
+      showLoading('Gerando post '+(i+1)+' de '+layouts.length+'...');
+      const baseImg=await fetchLayoutImage(layout.driveFileId);
+      await renderPost(canvas,baseImg,titulo,noticia);
+      const btnDl=card.querySelector('.btn-dl');
+      btnDl.onclick=()=>{
+        const a=document.createElement('a');
+        a.download='news-'+(layout.name||layout.id).replace(/\s+/g,'_')+'.png';
+        a.href=canvas.toDataURL('image/png'); a.click();
       };
     }
-    toast('✓ Posts gerados com sucesso!', 'success');
-  } catch(e) {
-    toast('Erro ao gerar: ' + e.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '▶ Gerar os 3 Posts';
+    toast('✓ Posts gerados com sucesso!','success');
+  }catch(e){
+    toast('Erro ao gerar: '+e.message,'error');
+  }finally{
+    btn.disabled=false; btn.innerHTML='▶ Gerar os 3 Posts';
     hideLoading();
   }
 }
 
-function createPostCard(layout, index) {
-  const card = document.createElement('div');
-  card.className = 'post-card';
-  card.innerHTML = `
+function createPostCard(layout,index){
+  const card=document.createElement('div');
+  card.className='post-card';
+  card.innerHTML=`
     <div class="post-label">
       <div class="post-num">${index+1}</div>
-      ${layout.name || 'Layout ' + (index+1)}
+      ${layout.name||'Layout '+(index+1)}
     </div>
     <div class="canvas-wrap">
       <canvas width="${CW}" height="${CH}" style="width:338px;height:600px"></canvas>
@@ -540,86 +461,81 @@ function createPostCard(layout, index) {
   return card;
 }
 
-async function renderPost(canvas, baseImg, titulo, noticia) {
-  const ctx = canvas.getContext('2d');
-  canvas.width = CW; canvas.height = CH;
+// ─── RENDERIZAR POST ──────────────────────────────────────────
+async function renderPost(canvas, baseImg, titulo, noticia){
+  const ctx=canvas.getContext('2d');
+  canvas.width=CW; canvas.height=CH;
 
-  // 1. Imagem base (layout)
-  if (baseImg) {
-    ctx.drawImage(baseImg, 0, 0, CW, CH);
+  // 1. Layout base (imagem completa do Drive)
+  if(baseImg){
+    ctx.drawImage(baseImg,0,0,CW,CH);
   } else {
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(0, 0, CW, CH);
-    ctx.fillStyle = '#333';
-    ctx.font = '32px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Layout não encontrado', CW/2, CH/2);
+    ctx.fillStyle='#1a1a1a'; ctx.fillRect(0,0,CW,CH);
+    ctx.fillStyle='#333'; ctx.font='32px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('Layout não encontrado',CW/2,CH/2);
   }
 
-  // 2. Foto do usuário
-  if (userPhoto) {
-    const p = TC.foto;
+  // 2. Foto do usuário — área entre as duas linhas vermelhas
+  if(userPhoto){
+    const p=TC.foto;
     ctx.save();
-    ctx.beginPath();
-    ctx.rect(p.x, p.y, p.w, p.h);
-    ctx.clip();
-    const scale = Math.max(p.w / userPhoto.width, p.h / userPhoto.height);
-    const sw = userPhoto.width * scale, sh = userPhoto.height * scale;
-    ctx.drawImage(userPhoto, p.x + (p.w-sw)/2, p.y + (p.h-sh)/2, sw, sh);
+    ctx.beginPath(); ctx.rect(p.x,p.y,p.w,p.h); ctx.clip();
+    const scale=Math.max(p.w/userPhoto.width,p.h/userPhoto.height);
+    const sw=userPhoto.width*scale, sh=userPhoto.height*scale;
+    ctx.drawImage(userPhoto,p.x+(p.w-sw)/2,p.y+(p.h-sh)/2,sw,sh);
     ctx.restore();
   }
 
-  // 3. Título
-  if (titulo) {
-    const t = TC.titulo;
-    ctx.font = `900 ${t.size}px 'Barlow Condensed', sans-serif`;
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'left';
-    ctx.shadowColor = 'rgba(0,0,0,.65)';
-    ctx.shadowBlur = 10;
-    wrapText(ctx, titulo.toUpperCase(), t.x, t.y, t.maxW, t.lineH);
-    ctx.shadowBlur = 0;
+  // 3. TÍTULO — dentro da caixa vermelha no header
+  if(titulo){
+    const t=TC.titulo;
+    // Ajusta o tamanho da fonte para caber na caixa (máx 1 linha de preferência)
+    let fontSize=t.size;
+    ctx.font=`900 ${fontSize}px 'Barlow Condensed',sans-serif`;
+    // Reduz fonte até caber na largura da caixa
+    while(ctx.measureText(titulo.toUpperCase()).width>t.maxW && fontSize>18){
+      fontSize--;
+      ctx.font=`900 ${fontSize}px 'Barlow Condensed',sans-serif`;
+    }
+    ctx.fillStyle='#ffffff';
+    ctx.textAlign='left';
+    ctx.textBaseline='alphabetic';
+    // Centraliza verticalmente na caixa
+    const textY=t.boxY+t.boxH*0.72;
+    ctx.fillText(titulo.toUpperCase(),t.x,textY);
   }
 
-  // 4. Notícia
-  if (noticia) {
-    const n = TC.noticia;
-    ctx.font = `800 ${n.size}px 'Barlow Condensed', sans-serif`;
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'left';
-    ctx.shadowColor = 'rgba(0,0,0,.5)';
-    ctx.shadowBlur = 6;
-    wrapText(ctx, noticia.toUpperCase(), n.x, n.y, n.maxW, n.lineH);
-    ctx.shadowBlur = 0;
+  // 4. NOTÍCIA — começa logo após a linha vermelha separadora inferior (y=1070)
+  if(noticia){
+    const n=TC.noticia;
+    ctx.font=`800 ${n.size}px 'Barlow Condensed',sans-serif`;
+    ctx.fillStyle='#ffffff';
+    ctx.textAlign='left';
+    ctx.textBaseline='alphabetic';
+    ctx.shadowColor='rgba(0,0,0,.5)';
+    ctx.shadowBlur=4;
+    wrapText(ctx,noticia.toUpperCase(),n.x,n.yStart,n.maxW,n.lineH);
+    ctx.shadowBlur=0;
   }
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────
-function wrapText(ctx, text, x, y, maxW, lh) {
-  const words = text.split(' ');
-  let line = '', lines = [];
-  for (const w of words) {
-    const test = line + w + ' ';
-    if (ctx.measureText(test).width > maxW && line) { lines.push(line.trim()); line = w + ' '; }
-    else line = test;
+function wrapText(ctx,text,x,y,maxW,lh){
+  const words=text.split(' ');
+  let line='',lines=[];
+  for(const w of words){
+    const test=line+w+' ';
+    if(ctx.measureText(test).width>maxW&&line){lines.push(line.trim());line=w+' ';}
+    else line=test;
   }
-  if (line.trim()) lines.push(line.trim());
-  lines.forEach((l, i) => ctx.fillText(l, x, y + i * lh));
+  if(line.trim())lines.push(line.trim());
+  lines.forEach((l,i)=>ctx.fillText(l,x,y+i*lh));
   return lines.length;
 }
-
-function fileToBase64(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = e => res(e.target.result);
-    r.onerror = rej;
-    r.readAsDataURL(file);
-  });
+function fileToBase64(file){
+  return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsDataURL(file);});
 }
-
-document.addEventListener('keydown', e => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') generateAll();
-});
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')generateAll();});
 </script>
 </body>
 </html>
