@@ -155,7 +155,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
       </div>
     </div>
     <button class="btn-generate" id="btnGenerate" onclick="generateAll()">
-      ▶ Gerar os 3 Posts
+      ▶ Gerar Posts
     </button>
   </aside>
 
@@ -170,7 +170,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
           <rect x="12" y="33" width="24" height="2.5" rx="1.25" fill="#222"/>
           <rect x="12" y="11" width="12" height="6" rx="1" fill="#8b0000" opacity="0.4"/>
         </svg>
-        <p>Preencha o título, texto e foto<br>e clique em <strong>▶ Gerar os 3 Posts</strong></p>
+        <p>Preencha o título, texto e foto<br>e clique em <strong>▶ Gerar Posts</strong></p>
       </div>
       <div class="posts-grid" id="postsGrid" style="display:none"></div>
     </div>
@@ -219,11 +219,11 @@ const TC = {
     boxX: 120, boxY: 325, boxW: 389, boxH: 55,   // caixa vermelha exata
     x: 136,                                         // margem interna esquerda
     yBase: 370,                                     // baseline do texto
-    maxW: 350,                                      // largura máxima (dentro da caixa)
-    size: 34,                                       // fonte em px
+    maxW: 360,                                      // largura máxima (dentro da caixa)
+    size: 44,                                       // fonte em px
   },
   noticia: {
-    x: 90,          // após a barra lateral vermelha
+    x: 130,         // após a barra lateral vermelha (barra termina em x~118)
     yStart: 1145,   // y=1071 (início texto) + 74px de padding
     maxW: 950,
     lineH: 70,
@@ -439,7 +439,7 @@ async function generateAll(){
   }catch(e){
     toast('Erro ao gerar: '+e.message,'error');
   }finally{
-    btn.disabled=false; btn.innerHTML='▶ Gerar os 3 Posts';
+    btn.disabled=false; btn.innerHTML='▶ Gerar Posts';
     hideLoading();
   }
 }
