@@ -225,10 +225,11 @@ const TC = {
   noticia: {
     x: 130,         // após a barra lateral vermelha (barra termina em x~118)
     yStart: 1145,   // y=1071 (início texto) + 74px de padding
-    maxW: 820,  // 1080 - 130 (margem esq) - 130 (margem dir igual)
+    maxW: 820,      // 1080 - 130 (margem esq) - 130 (margem dir igual)
     lineH: 70,
-    size: 54,
+    size: 54,       // tamanho inicial (reduz automaticamente se necessário)
   },
+  noticiaMaxH: 351, // altura máxima do bloco: 1496 - 1145 = 351px
   foto: {
     x: 0, y: 423, w: 1080, h: 637   // área da imagem (entre sep1 e sep2)
   }
@@ -505,17 +506,31 @@ async function renderPost(canvas, baseImg, titulo, noticia){
     ctx.fillText(titulo.toUpperCase(),t.x,textY);
   }
 
-  // 4. NOTÍCIA — começa logo após a linha vermelha separadora inferior (y=1070)
+  // 4. NOTÍCIA — auto-fit: reduz fonte até o texto caber no bloco
   if(noticia){
-    const n=TC.noticia;
-    ctx.font=`800 ${n.size}px 'Barlow Condensed',sans-serif`;
-    ctx.fillStyle='#ffffff';
-    ctx.textAlign='left';
-    ctx.textBaseline='alphabetic';
-    ctx.shadowColor='rgba(0,0,0,.5)';
-    ctx.shadowBlur=4;
-    wrapText(ctx,noticia.toUpperCase(),n.x,n.yStart,n.maxW,n.lineH);
-    ctx.shadowBlur=0;
+    const n       = TC.noticia;
+    const maxH    = TC.noticiaMaxH;   // altura máxima do bloco em px
+    const txtUp   = noticia.toUpperCase();
+    let fontSize  = n.size;           // começa em 54px
+    let lineH, numLines;
+
+    // Reduz fonte até o texto caber verticalmente
+    while(fontSize >= 22){
+      lineH    = Math.round(fontSize * 1.28);
+      ctx.font = `800 ${fontSize}px 'Barlow Condensed',sans-serif`;
+      numLines = countLines(ctx, txtUp, n.maxW);
+      if(numLines * lineH <= maxH) break;
+      fontSize -= 2;
+    }
+
+    ctx.font            = `800 ${fontSize}px 'Barlow Condensed',sans-serif`;
+    ctx.fillStyle       = '#ffffff';
+    ctx.textAlign       = 'left';
+    ctx.textBaseline    = 'alphabetic';
+    ctx.shadowColor     = 'rgba(0,0,0,.5)';
+    ctx.shadowBlur      = 4;
+    wrapText(ctx, txtUp, n.x, n.yStart, n.maxW, lineH);
+    ctx.shadowBlur      = 0;
   }
 }
 
@@ -531,6 +546,18 @@ function wrapText(ctx,text,x,y,maxW,lh){
   if(line.trim())lines.push(line.trim());
   lines.forEach((l,i)=>ctx.fillText(l,x,y+i*lh));
   return lines.length;
+}
+// Conta linhas sem desenhar (para calcular altura antes de renderizar)
+function countLines(ctx,text,maxW){
+  const words=text.split(' ');
+  let line='',count=0;
+  for(const w of words){
+    const test=line+w+' ';
+    if(ctx.measureText(test).width>maxW&&line){count++;line=w+' ';}
+    else line=test;
+  }
+  if(line.trim())count++;
+  return count;
 }
 function fileToBase64(file){
   return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsDataURL(file);});
