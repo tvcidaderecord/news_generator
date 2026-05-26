@@ -126,10 +126,7 @@ textarea{resize:vertical;min-height:100px;line-height:1.5}
   <aside class="sidebar">
     <div class="sidebar-section">
       <div class="sec-title">Dados da Notícia</div>
-      <div class="field">
-        <label>Seu Nome</label>
-        <input type="text" id="operador" placeholder="Ex: João Silva" />
-      </div>
+
       <div class="field">
         <label>Título da Notícia</label>
         <input type="text" id="titulo" placeholder="Título em destaque..." maxlength="60"
@@ -224,12 +221,12 @@ const TC = {
   },
   noticia: {
     x: 130,         // após a barra lateral vermelha (barra termina em x~118)
-    yStart: 1145,   // y=1071 (início texto) + 74px de padding
+    yStart: 1152,   // y=1071 (início texto) + 81px de padding (alinhado à arte manual)
     maxW: 820,      // 1080 - 130 (margem esq) - 130 (margem dir igual)
     lineH: 70,
     size: 54,       // tamanho inicial (reduz automaticamente se necessário)
   },
-  noticiaMaxH: 351, // altura máxima do bloco: 1496 - 1145 = 351px
+  noticiaMaxH: 344, // altura máxima do bloco: 1496 - 1152 = 344px
   foto: {
     x: 0, y: 423, w: 1080, h: 637   // área da imagem (entre sep1 e sep2)
   }
@@ -389,7 +386,7 @@ async function uploadLayoutFile(id,name,file){
   showLoading('Salvando "'+name+'" no Drive...');
   try{
     const b64=await fileToBase64(file);
-    const data=await apiPost({action:'uploadLayout',layoutId:id,layoutName:name,base64:b64.split(',')[1],mime:file.type,filename:file.name,uploadedBy:document.getElementById('operador').value.trim()||'Equipe'});
+    const data=await apiPost({action:'uploadLayout',layoutId:id,layoutName:name,base64:b64.split(',')[1],mime:file.type,filename:file.name,uploadedBy:'Equipe'});
     if(data.ok){toast('✓ Layout "'+name+'" salvo!','success');await loadLayouts();}
     else toast('Erro: '+data.error,'error');
   }catch(e){toast('Falha: '+e.message,'error');}
@@ -494,7 +491,7 @@ async function renderPost(canvas, baseImg, titulo, noticia){
     let fontSize=t.size;
     ctx.font=`900 ${fontSize}px 'Barlow Condensed',sans-serif`;
     // Reduz fonte até caber na largura da caixa
-    while(ctx.measureText(titulo.toUpperCase()).width>t.maxW && fontSize>18){
+    while(ctx.measureText(titulo).width>t.maxW && fontSize>18){
       fontSize--;
       ctx.font=`900 ${fontSize}px 'Barlow Condensed',sans-serif`;
     }
@@ -503,21 +500,21 @@ async function renderPost(canvas, baseImg, titulo, noticia){
     ctx.textBaseline='alphabetic';
     // Centraliza verticalmente na caixa
     const textY=t.boxY+t.boxH*0.72;
-    ctx.fillText(titulo.toUpperCase(),t.x,textY);
+    ctx.fillText(titulo, t.x, textY);
   }
 
   // 4. NOTÍCIA — auto-fit: reduz fonte até o texto caber no bloco
   if(noticia){
     const n       = TC.noticia;
     const maxH    = TC.noticiaMaxH;   // altura máxima do bloco em px
-    const txtUp   = noticia.toUpperCase();
+    const txtUp   = noticia;  // mantém capitalização original
     let fontSize  = n.size;           // começa em 54px
     let lineH, numLines;
 
     // Reduz fonte até o texto caber verticalmente
     while(fontSize >= 22){
       lineH    = Math.round(fontSize * 1.28);
-      ctx.font = `800 ${fontSize}px 'Barlow Condensed',sans-serif`;
+      ctx.font = `700 ${fontSize}px 'Barlow',sans-serif`;
       numLines = countLines(ctx, txtUp, n.maxW);
       if(numLines * lineH <= maxH) break;
       fontSize -= 2;
