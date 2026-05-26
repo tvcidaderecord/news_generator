@@ -410,6 +410,9 @@ async function generateAll(){
   if(!titulo&&!noticia){toast('Preencha o título ou o texto da notícia.','error');return;}
   if(!layouts.length){toast('Nenhum layout cadastrado. Vá em "Gerenciar Layouts".','error');return;}
 
+  // Garante que as fontes estão carregadas antes de medir texto no canvas
+  await document.fonts.ready;
+
   const btn=document.getElementById('btnGenerate');
   btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Gerando...';
   hideError();
@@ -515,12 +518,13 @@ async function renderPost(canvas, baseImg, titulo, noticia){
     while(fontSize >= 22){
       lineH    = Math.round(fontSize * 1.28);
       ctx.font = `700 ${fontSize}px 'Barlow',sans-serif`;
+      ctx.measureText('M'); // aquece a fonte antes de medir (evita race condition)
       numLines = countLines(ctx, txtUp, n.maxW);
       if(numLines * lineH <= maxH) break;
       fontSize -= 2;
     }
 
-    ctx.font            = `800 ${fontSize}px 'Barlow Condensed',sans-serif`;
+    ctx.font            = `700 ${fontSize}px 'Barlow',sans-serif`;
     ctx.fillStyle       = '#ffffff';
     ctx.textAlign       = 'left';
     ctx.textBaseline    = 'alphabetic';
